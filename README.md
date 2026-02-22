@@ -2,6 +2,40 @@
 
 # 🏔️ Alpamayo 1
 
+## My Profiling commands
+
+### 1. Entering docker container 
+```bash
+docker run --rm -it   --runtime=nvidia   --ipc=host   -v ~/Alpamayo_Quant_Project/output/Alpamayo-R1-NVFP4/onnx:/workspace/onnx_models   -v /home/charlie/alpamayo:/workspace/alpamayo   -v /home/charlie/alpamayo_outputs:/outputs   -v /home/charlie/hf_cache:/hf_cache   -v /home/charlie/hf_datasets:/workspace/hf_datasets   -v /home/charlie/hf_config:/root/.cache/huggingface   -e HF_HOME=/root/.cache/huggingface   -e HF_HUB_CACHE=/hf_cache/hub   -e TRANSFORMERS_CACHE=/hf_cache/transformers   -e HF_DATASETS_CACHE=/hf_cache/datasets   -w /workspace/alpamayo   alpamayo-ready:v1   bash
+```
+
+### 2. Download a clip
+```bash
+python3 download_one_clip_allsensor_zip.py \
+  --dataset_dir /workspace/hf_datasets/PhysicalAI-Autonomous-Vehicles \
+  --out_dir /outputs/clip_1f9a486f \
+  --clip_id 1f9a486f-76fb-497d-a08a-f490b7838c3a \
+  --limit_radar 4
+```
+### 3. Latency profiling up to 1181 clips
+```bash
+python -u run_all_clips_jsonl.py  --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1181   --out_jsonl /outputs/all_clip_results_thor_16bit_bf16_VL2B.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
+```
+
+### 4. nsys profiling command
+```bash
+nsys profile   -t cuda,nvtx,osrt,cudnn,cublas   --cuda-memory-usage=true   --capture-range=cudaProfilerApi   --capture-range-end=stop   --cudabacktrace=true   --sample=none   --force-overwrite=true   -o /outputs/nsys/1clips_nvtx_new   python -u run_all_clips_jsonl.py   --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1   --out_jsonl /outputs/1_clip_results_thor_new.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
+```
+
+### 5. Profile 4-bits bitsandbytes model, instead of the original 16-bit model
+replace above commmand's model_path
+```bash
+ --model_path dwko/Alpamayo-R1-10B-4bit 
+```
+
+### 6. Profile VL2B, instead of orinal VL8B (note: this is a hack, the reasoning will be messed up)
+replace "vlm_name_or_path" in base_model.py
+
 ### Bridging Reasoning and Action Prediction for Generalizable Autonomous Driving
 
 [![HuggingFace](https://img.shields.io/badge/🤗%20Model-Alpamayo--R1--10B-blue)](https://huggingface.co/nvidia/Alpamayo-R1-10B)

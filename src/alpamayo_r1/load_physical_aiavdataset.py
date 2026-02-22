@@ -68,7 +68,10 @@ def load_physical_aiavdataset(
             - clip_id: The clip ID
     """
     if avdi is None:
-        avdi = physical_ai_av.PhysicalAIAVDatasetInterface()
+        # avdi = physical_ai_av.PhysicalAIAVDatasetInterface()
+        import os
+        DATA_LOCAL_DIR = os.environ.get("PHYSICALAI_LOCAL_DIR", "/workspace/hf_datasets/PhysicalAI-Autonomous-Vehicles")
+        avdi = physical_ai_av.PhysicalAIAVDatasetInterface(local_dir=DATA_LOCAL_DIR)
 
     if camera_features is None:
         camera_features = [

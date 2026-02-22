@@ -21,11 +21,17 @@ from typing import Any
 import einops
 import hydra.utils as hyu
 import torch
+try:
+    from transformers import Qwen3VLConfig
+except ImportError:
+    # fall back to whatever exists in this transformers version
+    from transformers import Qwen2VLConfig as Qwen3VLConfig
+
 from transformers import (
     AutoProcessor,
     PretrainedConfig,
     PreTrainedModel,
-    Qwen3VLConfig,
+    #Qwen3VLConfig,
     Qwen3VLForConditionalGeneration,
 )
 
@@ -204,7 +210,8 @@ class ReasoningVLAConfig(PretrainedConfig):
 
     def __init__(
         self,
-        vlm_name_or_path: str = "Qwen/Qwen3-VL-8B-Instruct",
+        # vlm_name_or_path: str = "Qwen/Qwen3-VL-8B-Instruct", 
+        vlm_name_or_path: str = "Qwen/Qwen3-VL-2B-Instruct", #charlie-test
         vlm_backend: str = "qwenvl3",
         traj_tokenizer_cfg: dict[str, Any] | None = None,
         hist_traj_tokenizer_cfg: dict[str, Any] | None = None,
@@ -368,7 +375,7 @@ class ReasoningVLA(PreTrainedModel, TrajectoryFusionMixin):
         """Initialize Qwen3-VL VLM backbone.
 
         Qwen3-VL uses Qwen3VLForConditionalGeneration from transformers.
-        See: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+        See: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct or 2B
         """
         vlm_config = Qwen3VLConfig.from_pretrained(
             config.vlm_name_or_path,
@@ -439,7 +446,11 @@ class ReasoningVLA(PreTrainedModel, TrajectoryFusionMixin):
         """Get the input embeddings of the model."""
         return self.vlm.language_model.embed_tokens
 
-    def tie_weights(self) -> None:
+    def tie_weights(self, *args, **kwargs) -> None:
         """Delegate weight tying to the nested VLM model."""
         if hasattr(self.vlm, "tie_weights"):
-            self.vlm.tie_weights()
+            try:
+                self.vlm.tie_weights(*args, **kwargs)
+            except TypeError:
+                # nested model may not accept the new kwargs either 
+                self.vlm.tie_weights()
