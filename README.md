@@ -2,6 +2,8 @@
 
 # 🏔️ Alpamayo 1
 
+</div>
+
 ## My Profiling commands
 
 ### 1. Entering docker container 
@@ -42,7 +44,7 @@ replace "vlm_name_or_path" in base_model.py
 [![arXiv](https://img.shields.io/badge/arXiv-2511.00088-b31b1b.svg)](https://arxiv.org/abs/2511.00088)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](./LICENSE)
 
-</div>
+
 
 _Note: Following the release of [NVIDIA Alpamayo](https://nvidianews.nvidia.com/news/alpamayo-autonomous-vehicle-development) at CES 2026, Alpamayo-R1 has been renamed to Alpamayo 1._
 
