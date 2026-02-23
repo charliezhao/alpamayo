@@ -22,7 +22,29 @@ import physical_ai_av
 import scipy.spatial.transform as spt
 import torch
 from einops import rearrange
+import os
+from pathlib import Path
 
+def _resolve_physicalai_local_dir() -> str:
+    # 1) explicit override wins
+    env = os.environ.get("PHYSICALAI_LOCAL_DIR")
+    if env:
+        return env
+
+    # 2) auto-detect common locations across Thor / P920
+    candidates = [
+        "/workspace/hf_datasets/PhysicalAI-Autonomous-Vehicles",  # Thor container default
+        "~/hf_datasets/PhysicalAI-Autonomous-Vehicles",           # P920 location
+        str(Path.home() / "hf_datasets" / "PhysicalAI-Autonomous-Vehicles"),
+        str(Path.home() / "hf_cache" / "datasets" / "PhysicalAI-Autonomous-Vehicles"),
+    ]
+
+    for p in candidates:
+        if Path(p).exists():
+            return p
+
+    # 3) final fallback (keep your original default)
+    return "/workspace/hf_datasets/PhysicalAI-Autonomous-Vehicles"
 
 def load_physical_aiavdataset(
     clip_id: str,
@@ -69,8 +91,7 @@ def load_physical_aiavdataset(
     """
     if avdi is None:
         # avdi = physical_ai_av.PhysicalAIAVDatasetInterface()
-        import os
-        DATA_LOCAL_DIR = os.environ.get("PHYSICALAI_LOCAL_DIR", "/workspace/hf_datasets/PhysicalAI-Autonomous-Vehicles")
+        DATA_LOCAL_DIR = _resolve_physicalai_local_dir()
         avdi = physical_ai_av.PhysicalAIAVDatasetInterface(local_dir=DATA_LOCAL_DIR)
 
     if camera_features is None:

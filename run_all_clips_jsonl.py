@@ -8,6 +8,7 @@ import socket
 import numpy as np
 import torch
 from tqdm import tqdm
+import traceback
 
 class NvtxRange:
     def __init__(self, name): self.name = name
@@ -76,7 +77,7 @@ def inject_nvtx_hooks(model: torch.nn.Module, target_module_name: str, nvtx_labe
     print(f"[Profiling] Warning: Could not find module '{target_module_name}'")
 """
 def inject_nvtx_hooks(model: torch.nn.Module, target_module_name: str, nvtx_label: str):
-    # ynamically wraps a submodule and manipulates the NVTX stack for a flat timeline
+    # dynamically wraps a submodule and manipulates the NVTX stack for a flat timeline
     for name, module in model.named_modules():
         if name == target_module_name:
             
@@ -101,7 +102,6 @@ def inject_nvtx_hooks(model: torch.nn.Module, target_module_name: str, nvtx_labe
             return
             
     print(f"[Profiling] Warning: Could not find module '{target_module_name}'")
-
 
 # -------------------------
 # Main
@@ -250,7 +250,8 @@ def main():
     # -------------------------
     # Main loop (JSONL output)
     # -------------------------
-    with open(args.out_jsonl, "w") as out:
+    mode = "a" if os.path.exists(args.out_jsonl) else "w"
+    with open(args.out_jsonl, mode) as out:
         for cid in tqdm(clip_ids, desc="Clips"):
 
             # --- ADD THIS: Skip if already done ---
@@ -306,6 +307,7 @@ def main():
                 torch.cuda.reset_peak_memory_stats()
                 start.record()
                 t0 = time.time()
+                """
                 with NvtxRange(f"alpamayo_clip:{cid}"):
                     with torch.autocast(args.device, dtype=amp_dtype):
                         pred_xyz, pred_rot, extra = (
@@ -318,6 +320,29 @@ def main():
                                 return_extra=True,
                             )
                         )
+                """
+                with NvtxRange(f"alpamayo_clip:{cid}"):
+                    with torch.autocast(args.device, dtype=amp_dtype):
+                        ret = model.sample_trajectories_from_data_with_vlm_rollout(
+                            data=model_inputs,
+                            top_p=args.top_p,
+                            temperature=args.temperature,
+                            num_traj_samples=args.num_traj_samples,
+                            max_generation_length=args.max_generation_length,
+                            return_extra=True,
+                        )
+
+                        if isinstance(ret, tuple) and len(ret) == 3:
+                            pred_xyz, pred_rot, extra = ret
+                        elif isinstance(ret, tuple) and len(ret) == 2:
+                            pred_xyz, pred_rot = ret
+                            extra = {}  # or None
+                        else:
+                            raise TypeError(
+                                f"Unexpected return from sample_trajectories_from_data_with_vlm_rollout: "
+                                f"type={type(ret)} value={ret!r}"
+                            )                
+
                 end.record()
                 torch.cuda.synchronize()
                 t1 = time.time()
@@ -342,7 +367,8 @@ def main():
             except Exception as e:
                 rec["ok"] = False
                 rec["e2e_clip_s"] = time.time() - t_clip0
-                rec["error"] = repr(e)
+                # rec["error"] = repr(e)
+                rec["error"] = traceback.format_exc()
 
             out.write(json.dumps(json_safe(rec)) + "\n")
             out.flush()

@@ -210,8 +210,8 @@ class ReasoningVLAConfig(PretrainedConfig):
 
     def __init__(
         self,
-        # vlm_name_or_path: str = "Qwen/Qwen3-VL-8B-Instruct", 
-        vlm_name_or_path: str = "Qwen/Qwen3-VL-2B-Instruct", #charlie-test
+        vlm_name_or_path: str = "Qwen/Qwen3-VL-8B-Instruct", 
+        # vlm_name_or_path: str = "Qwen/Qwen3-VL-2B-Instruct", #charlie-test
         vlm_backend: str = "qwenvl3",
         traj_tokenizer_cfg: dict[str, Any] | None = None,
         hist_traj_tokenizer_cfg: dict[str, Any] | None = None,
@@ -375,7 +375,7 @@ class ReasoningVLA(PreTrainedModel, TrajectoryFusionMixin):
         """Initialize Qwen3-VL VLM backbone.
 
         Qwen3-VL uses Qwen3VLForConditionalGeneration from transformers.
-        See: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct or 2B
+        See: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
         """
         vlm_config = Qwen3VLConfig.from_pretrained(
             config.vlm_name_or_path,
