@@ -20,13 +20,27 @@ python3 download_one_clip_allsensor_zip.py \
   --limit_radar 4
 ```
 ### 3. Latency profiling up to 1181 clips
+Thor:
 ```bash
 python -u run_all_clips_jsonl.py  --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1181   --out_jsonl /outputs/all_clip_results_thor_16bit_bf16_VL2B.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
 ```
+P920:
+```bash
+python -u run_all_clips_jsonl.py  --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1   --out_jsonl ../alpamayo_outputs/1clips_thor_16bit_bf16.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
+```
 
 ### 4. nsys profiling command
+Thor:
 ```bash
 nsys profile   -t cuda,nvtx,osrt,cudnn,cublas   --cuda-memory-usage=true   --capture-range=cudaProfilerApi   --capture-range-end=stop   --cudabacktrace=true   --sample=none   --force-overwrite=true   -o /outputs/nsys/1clips_nvtx_new   python -u run_all_clips_jsonl.py   --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1   --out_jsonl /outputs/1_clip_results_thor_new.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
+```
+P920 + 3090:
+```bash
+nsys profile -t nvtx  --sample=none   --force-overwrite=true   -o ../alpamayo_outputs/nsys/3clips_nvtx_3090_9   python -u run_all_clips_jsonl.py   --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 3   --out_jsonl ../alpamayo_outputs/3_clip_3090_9.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
+```
+The following nsys command line with some extra logging which may increase the latency by 33% on P920. 
+```bash
+nsys profile -t cuda,nvtx,osrt,cudnn,cublas   --cuda-memory-usage=true   --capture-range=cudaProfilerApi   --capture-range-end=stop   --cudabacktrace=true   --sample=none   --force-overwrite=true   -o ../alpamayo_outputs/nsys/1clips_nvtx_3090   python -u run_all_clips_jsonl.py   --model_path nvidia/Alpamayo-R1-10B   --clip_ids_file ./clip_ids_test_1181.txt   --max_clips 1   --out_jsonl ../alpamayo_outputs/1_clip3090.jsonl   --dtype bf16   --num_traj_samples 1   --max_generation_length 40   --maybe_stream
 ```
 
 ### 5. Profile 4-bits bitsandbytes model, instead of the original 16-bit model
