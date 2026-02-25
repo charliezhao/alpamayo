@@ -163,8 +163,7 @@ def main():
 
     # Dataset interface (reuse for speed)
     avdi = physical_ai_av.PhysicalAIAVDatasetInterface()
-
-    """    
+  
     # original code
     # Load model ONCE
     model = AlpamayoR1.from_pretrained(
@@ -187,6 +186,7 @@ def main():
     # 3. Now move the rest of the initialized weights to the device
     model.to(args.device) 
     #end charlie's hack
+    """
     
     processor = helper.get_processor(model.tokenizer)
 

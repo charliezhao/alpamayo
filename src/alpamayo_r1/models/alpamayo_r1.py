@@ -92,7 +92,8 @@ class ExpertLogitsProcessor(LogitsProcessor):
         Returns:
             torch.FloatTensor: The modified scores tensor with trajectory tokens masked out (set to -inf).
         """
-        scores[:, self.traj_token_offset : self.traj_token_offset + self.traj_vocab_size] = float("-inf")
+        # Directly assign -inf to the trajectory token positions in the scores tensor
+        scores[:, self.traj_token_offset : self.traj_token_offset + self.traj_vocab_size] = float('-inf')
         return scores
 
 
@@ -204,7 +205,7 @@ class AlpamayoR1(ReasoningVLA):
 
                 gen_config.max_new_tokens = kwargs.get("max_generation_length", self.config.tokens_per_future_traj)
                 
-                outputs = self.vlm.generate(
+                vlm_outputs = self.vlm.generate(
                     input_ids=prefill_output.sequences, 
                     past_key_values=prefill_output.past_key_values,
                     generation_config=gen_config,
@@ -215,8 +216,8 @@ class AlpamayoR1(ReasoningVLA):
 
             # --- STEP 4: TRAJECTORY DECODING (Target: 8.75ms) ---
             with NvtxRange("4_Trajectory_Decoding"):
-                vlm_tokens = replace_padding_after_eos(outputs.sequences, eos_id, self.tokenizer.pad_token_id)
-                prompt_cache = outputs.past_key_values
+                vlm_tokens = replace_padding_after_eos(vlm_outputs.sequences, eos_id, self.tokenizer.pad_token_id)
+                prompt_cache = vlm_outputs.past_key_values
                 prefill_seq_len = prompt_cache.get_seq_length()
                 b_star = vlm_tokens.shape[0]
                 
@@ -247,6 +248,7 @@ class AlpamayoR1(ReasoningVLA):
                 sampled_action = self.diffusion.sample(batch_size=B * n_samples_total, step_fn=step_fn, device=device, **diffusion_kwargs)
                 torch.cuda.synchronize()
 
+            """
             # Final physical mapping
             p_xyz, p_rot = self.action_space.action_to_traj(sampled_action, 
                 einops.repeat(ego_history_xyz[:, -1], "b ... -> (b n) ...", n=n_samples_total), 
@@ -254,7 +256,26 @@ class AlpamayoR1(ReasoningVLA):
             
             return einops.rearrange(p_xyz, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples), \
                    einops.rearrange(p_rot, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples)
+            """
+            
+            # Map back to original variable names for return logic
+            hist_xyz = einops.repeat(ego_history_xyz[:, -1], "b ... -> (b n) ...", n=n_samples_total)
+            hist_rot = einops.repeat(ego_history_rot[:, -1], "b ... -> (b n) ...", n=n_samples_total)
+            p_xyz, p_rot = self.action_space.action_to_traj(sampled_action, hist_xyz, hist_rot)
+            
+            pred_xyz = einops.rearrange(p_xyz, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples)
+            pred_rot = einops.rearrange(p_rot, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples)
+
+            # --- ORIGINAL RETURN LOGIC ---
+            if kwargs.get("return_extra", False):
+                extra = extract_text_tokens(self.tokenizer, vlm_outputs.sequences)
+                for text_tokens in extra.keys():
+                    extra[text_tokens] = np.array(extra[text_tokens]).reshape(
+                        [input_ids.shape[0], num_traj_sets, num_traj_samples]
+                    )
+                return pred_xyz, pred_rot, extra
+            
+            return pred_xyz, pred_rot            
 
 AutoConfig.register("alpamayo_r1", AlpamayoR1Config)
 AutoModel.register(AlpamayoR1Config, AlpamayoR1)
-
