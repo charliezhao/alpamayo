@@ -247,17 +247,7 @@ class AlpamayoR1(ReasoningVLA):
                 diffusion_kwargs = {**(diffusion_kwargs or {}), "num_steps": 5}
                 sampled_action = self.diffusion.sample(batch_size=B * n_samples_total, step_fn=step_fn, device=device, **diffusion_kwargs)
                 torch.cuda.synchronize()
-
-            """
-            # Final physical mapping
-            p_xyz, p_rot = self.action_space.action_to_traj(sampled_action, 
-                einops.repeat(ego_history_xyz[:, -1], "b ... -> (b n) ...", n=n_samples_total), 
-                einops.repeat(ego_history_rot[:, -1], "b ... -> (b n) ...", n=n_samples_total))
-            
-            return einops.rearrange(p_xyz, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples), \
-                   einops.rearrange(p_rot, "(b ns nj) ... -> b ns nj ...", ns=num_traj_sets, nj=num_traj_samples)
-            """
-            
+        
             # Map back to original variable names for return logic
             hist_xyz = einops.repeat(ego_history_xyz[:, -1], "b ... -> (b n) ...", n=n_samples_total)
             hist_rot = einops.repeat(ego_history_rot[:, -1], "b ... -> (b n) ...", n=n_samples_total)
